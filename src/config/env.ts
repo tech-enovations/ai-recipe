@@ -7,7 +7,7 @@ export const ENV = {
   // Server
   PORT: parseInt(process.env.PORT || "3000", 10),
   NODE_ENV: process.env.NODE_ENV || "development",
-  
+  API_URL: process.env.API_URL || "http://localhost:3000",
   // Google AI
   GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || "",
   

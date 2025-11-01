@@ -264,13 +264,47 @@
         
         const avatar = type === 'user' ? '👤' : '🤖';
         
+        // Format AI messages with markdown-like rendering
+        const formattedText = type === 'ai' ? formatMarkdown(text) : escapeHtml(text);
+        
         messageDiv.innerHTML = `
             <div class="message-avatar">${avatar}</div>
-            <div class="message-bubble">${escapeHtml(text)}</div>
+            <div class="message-bubble">${formattedText}</div>
         `;
         
         messagesDiv.appendChild(messageDiv);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+    
+    function formatMarkdown(text) {
+        let formatted = escapeHtml(text);
+        
+        // Headers (### and ####)
+        formatted = formatted.replace(/####\s*(.+?)(?=\n|$)/g, '<h4 style="font-size: 15px; font-weight: 700; color: #667eea; margin: 12px 0 8px 0; border-bottom: 2px solid #e0e0e0; padding-bottom: 4px;">$1</h4>');
+        formatted = formatted.replace(/###\s*(.+?)(?=\n|$)/g, '<h3 style="font-size: 17px; font-weight: 700; color: #764ba2; margin: 15px 0 10px 0;">$1</h3>');
+        formatted = formatted.replace(/##\s*(.+?)(?=\n|$)/g, '<h2 style="font-size: 19px; font-weight: 700; color: #667eea; margin: 18px 0 12px 0;">$1</h2>');
+        
+        // Bold text (**text**)
+        formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #333; font-weight: 700;">$1</strong>');
+        
+        // Italic text (*text* or _text_)
+        formatted = formatted.replace(/\*(.+?)\*/g, '<em style="font-style: italic;">$1</em>');
+        formatted = formatted.replace(/_(.+?)_/g, '<em style="font-style: italic;">$1</em>');
+        
+        // Bullet points (* item or - item)
+        formatted = formatted.replace(/^[\*\-]\s+(.+)$/gm, '<li style="margin-left: 20px; margin-bottom: 4px; line-height: 1.6;">$1</li>');
+        
+        // Wrap consecutive <li> in <ul>
+        formatted = formatted.replace(/(<li[^>]*>.*?<\/li>\s*)+/g, '<ul style="margin: 8px 0; padding-left: 0;">$&</ul>');
+        
+        // Line breaks
+        formatted = formatted.replace(/\n\n/g, '<br><br>');
+        formatted = formatted.replace(/\n/g, '<br>');
+        
+        // Code blocks (inline `code`)
+        formatted = formatted.replace(/`([^`]+)`/g, '<code style="background: #f4f4f4; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; color: #e83e8c;">$1</code>');
+        
+        return formatted;
     }
     
     function handleKeyPress(event) {

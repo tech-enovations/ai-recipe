@@ -164,6 +164,19 @@
 </div>
 
 <div class="input-group">
+    <label for="servingSize">Số lượng người ăn</label>
+    <select id="servingSize">
+        <option value="">Mặc định (2-4 người)</option>
+        <option value="1">1 người</option>
+        <option value="2">2 người</option>
+        <option value="4" selected>4 người</option>
+        <option value="6">6 người</option>
+        <option value="8">8 người</option>
+        <option value="10">10 người</option>
+    </select>
+</div>
+
+<div class="input-group">
     <label for="language">Ngôn ngữ</label>
     <select id="language">
         <option value="vi" selected>Tiếng Việt</option>
@@ -213,6 +226,8 @@
         const dishName = document.getElementById('dishName').value;
         const categories = Array.from(document.getElementById('categories').selectedOptions).map(opt => opt.value);
         const language = document.getElementById('language').value;
+        const servingSizeValue = document.getElementById('servingSize').value;
+        const servingSize = servingSizeValue ? parseInt(servingSizeValue) : undefined;
         
         if (!dishName) {
             alert('Vui lòng nhập tên món ăn!');
@@ -232,10 +247,13 @@
         }
         
         // SSE streaming
+        const requestBody = { dishName, categories, language };
+        if (servingSize) requestBody.servingSize = servingSize;
+        
         fetch(`${API_URL}/api/generate-recipe-stream`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dishName, categories, language })
+            body: JSON.stringify(requestBody)
         }).then(response => {
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
@@ -356,10 +374,23 @@
                 <h3>📝 Nguyên liệu (${recipe.ingredients.length})</h3>
                 ${recipe.ingredients.map((ing, idx) => 
                     `<div class="ingredient-item">
-                        <span style="color: #667eea; font-weight: 600;">${idx + 1}.</span>
-                        ${escapeHtml(ing.name)}: <strong>${escapeHtml(ing.quantity)}</strong>
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div>
+                                <span style="color: #667eea; font-weight: 600;">${idx + 1}.</span>
+                                ${escapeHtml(ing.name)}: <strong>${escapeHtml(ing.quantity)}</strong>
+                            </div>
+                            ${ing.whereToFind ? `<div style="font-size: 12px; color: #999; text-align: right;">
+                                📍 ${escapeHtml(ing.whereToFind)}
+                            </div>` : ''}
+                        </div>
                     </div>`
                 ).join('')}
+                ${recipe.shoppingTips ? `
+                    <div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-top: 10px; border-left: 4px solid #ffc107;">
+                        <strong style="color: #856404;">💡 Mẹo mua sắm:</strong><br>
+                        <span style="color: #856404; font-size: 14px;">${escapeHtml(recipe.shoppingTips)}</span>
+                    </div>
+                ` : ''}
             </div>
             <div class="recipe-section">
                 <h3>👨‍🍳 Các bước thực hiện (${sortedSteps.length})</h3>
@@ -367,6 +398,14 @@
                     <div class="step-item">
                         <strong style="color: #667eea;">${step.stepNumber}.</strong>
                         ${escapeHtml(step.description)}
+                        ${step.videoUrl ? `
+                            <div style="margin-top: 10px;">
+                                <a href="${escapeHtml(step.videoUrl)}" target="_blank" 
+                                   style="display: inline-block; padding: 6px 12px; background: #ff0000; color: white; text-decoration: none; border-radius: 6px; font-size: 13px;">
+                                    ▶️ Xem video hướng dẫn
+                                </a>
+                            </div>
+                        ` : ''}
                     </div>
                 `).join('')}
             </div>

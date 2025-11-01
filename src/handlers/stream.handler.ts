@@ -6,11 +6,12 @@ import { vectorStoreService } from "../services/vector-store.service";
 import { log } from "../utils/logger";
 
 export async function generateRecipeStreamHandler(req: Request, res: Response) {
-  const { dishName, categories, category, language = "vi" } = req.body as {
+  const { dishName, categories, category, language = "vi", servingSize } = req.body as {
     dishName?: string;
     categories?: string[];
     category?: string;
     language?: string;
+    servingSize?: number;
   };
 
   if (!dishName) {
@@ -84,12 +85,16 @@ export async function generateRecipeStreamHandler(req: Request, res: Response) {
     const categoryInstruction =
       providedCategories.length > 0 ? ` Categories: ${providedCategories.join(", ")}.` : "";
     const languageInstruction = language === "eng" ? " English." : " Tiếng Việt.";
+    const servingInstruction = servingSize 
+      ? ` Tính cho ${servingSize} người ăn.` 
+      : " Tính cho 2-4 người ăn (mặc định).";
 
-    const prompt = `Tạo công thức chi tiết cho: ${dishName}.${categoryInstruction}${languageInstruction}
+    const prompt = `Tạo công thức chi tiết cho: ${dishName}.${categoryInstruction}${servingInstruction}${languageInstruction}
      Trả về JSON với:
-     - dishName, description, prepTime, cookTime, servings
-     - ingredients: [{name, quantity}]
-     - steps: [{stepNumber: 1, description: "..."}, {stepNumber: 2, description: "..."}, ...]
+     - dishName, description, prepTime, cookTime, servings (số người theo yêu cầu)
+     - ingredients: [{name, quantity (điều chỉnh theo số người), whereToFind (nơi mua ở Việt Nam)}]
+     - steps: [{stepNumber, description, videoUrl (YouTube/TikTok nếu có)}]
+     - shoppingTips: Gợi ý mua nguyên liệu ở VN (chợ nào, siêu thị, thời gian)
      Tối thiểu 3 bước, tối đa 6 bước.
      ${ragContext}`;
 

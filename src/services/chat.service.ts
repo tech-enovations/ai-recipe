@@ -1,7 +1,7 @@
 // src/services/chat.service.ts
 import { BufferMemory } from "langchain/memory";
 import { MongoDBChatMessageHistory } from "@langchain/mongodb";
-import { ConversationChain } from "langchain/chains";
+import { LLMChain } from "langchain/chains";
 import {
   ChatPromptTemplate,
   MessagesPlaceholder,
@@ -16,7 +16,7 @@ import { vectorStoreService } from "./vector-store.service";
 interface UserSession {
   userId: string;
   memory: BufferMemory;
-  chain: ConversationChain;
+  chain: LLMChain;
   createdAt: Date;
   lastActivity: Date;
 }
@@ -94,7 +94,7 @@ NGÔN NGỮ: Tự động detect và trả lời bằng ngôn ngữ user dùng.`
         HumanMessagePromptTemplate.fromTemplate("{input}"),
       ]);
 
-      const chain = new ConversationChain({
+      const chain = new LLMChain({
         llm: llmService.getChatLLM(),
         memory: memory,
         prompt: chatPrompt,

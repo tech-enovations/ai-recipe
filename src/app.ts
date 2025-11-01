@@ -36,9 +36,7 @@ app.use("/api", recipeRoutes);
 app.use("/api", chatRoutes);
 
 // View routes
-const apiUrl = ENV.NODE_ENV === "production" 
-  ? "https://ai-recipe-node.vercel.app" 
-  : `http://localhost:${ENV.PORT}`;
+const apiUrl = ENV.API_URL;
 
 app.get("/", (req, res) => {
   res.render("index", {
