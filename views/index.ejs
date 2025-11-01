@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .hero {
+            text-align: center;
+            color: white;
+            padding: 60px 20px;
+        }
+        
+        h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .subtitle {
+            font-size: 20px;
+            opacity: 0.9;
+            margin-bottom: 40px;
+        }
+        
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        
+        .card-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .card-desc {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .endpoint {
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #667eea;
+            margin-top: 10px;
+            display: inline-block;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-top: 15px;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .features {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            margin-top: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .features h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .feature-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="hero">
+            <h1>🍳 <%= title %></h1>
+            <p class="subtitle">AI-Powered Recipe Generation with RAG & Chat Assistant</p>
+        </div>
+        
+        <div class="cards">
+            <div class="card">
+                <div class="card-icon">🤖</div>
+                <div class="card-title">Recipe Generator</div>
+                <div class="card-desc">
+                    Tạo công thức nấu ăn chi tiết với AI. Hỗ trợ nhiều categories, RAG-enhanced, và multi-language.
+                </div>
+                <div class="endpoint">POST /api/generate-recipe</div>
+                <br>
+                <a href="/stream-demo.html" class="btn">Try Demo →</a>
+            </div>
+            
+            <div class="card">
+                <div class="card-icon">🔍</div>
+                <div class="card-title">Vector Search</div>
+                <div class="card-desc">
+                    Tìm kiếm công thức tương tự bằng semantic search với MongoDB Atlas Vector Store.
+                </div>
+                <div class="endpoint">POST /api/search-recipes</div>
+            </div>
+            
+            <div class="card">
+                <div class="card-icon">💬</div>
+                <div class="card-title">Chat Assistant</div>
+                <div class="card-desc">
+                    Trợ lý ảo với memory cho từng user. Lưu persistent trong MongoDB.
+                </div>
+                <div class="endpoint">POST /api/chat</div>
+            </div>
+        </div>
+        
+        <div class="features">
+            <h2>✨ Features</h2>
+            <div class="feature-list">
+                <div class="feature-item">
+                    🎯 <strong>RAG-Enhanced</strong><br>
+                    Retrieval với similarity threshold 70%
+                </div>
+                <div class="feature-item">
+                    🚀 <strong>Fast Performance</strong><br>
+                    Pino logging + optimized queries
+                </div>
+                <div class="feature-item">
+                    💾 <strong>MongoDB Persistence</strong><br>
+                    Vector store + chat history
+                </div>
+                <div class="feature-item">
+                    🌐 <strong>Multi-language</strong><br>
+                    Vietnamese & English support
+                </div>
+                <div class="feature-item">
+                    📊 <strong>SSE Streaming</strong><br>
+                    Real-time progress updates
+                </div>
+                <div class="feature-item">
+                    🧠 <strong>Per-User Memory</strong><br>
+                    Chat context và preferences
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
