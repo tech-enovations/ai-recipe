@@ -34,7 +34,7 @@ export const ENV = {
   
   // RAG Settings
   RAG_TOP_K: 5,
-  RAG_SIMILARITY_THRESHOLD: 0.7,
+  RAG_SIMILARITY_THRESHOLD: 0.4,
   RAG_CONTEXT_LIMIT: 3,
 } as const;
 
