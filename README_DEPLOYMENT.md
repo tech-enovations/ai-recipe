@@ -1,6 +1,6 @@
 # Deployment Guide - Vercel
 
-## 📦 Cấu trúc Project (Serverless-Ready)
+## 📦 Project Structure (Serverless-Ready)
 
 ```
 ai-recipe/
