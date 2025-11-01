@@ -1,6 +1,7 @@
 // src/handlers/chat.handler.ts
 import { Request, Response } from "express";
 import { chatService } from "../services/chat.service";
+import { log } from "../utils/logger";
 
 export async function chatHandler(req: Request, res: Response) {
   const { userId, message } = req.body as {
@@ -15,7 +16,7 @@ export async function chatHandler(req: Request, res: Response) {
   }
 
   try {
-    console.log(`💬 Chat from ${userId}: "${message.substring(0, 50)}..."`);
+    log.chat.message(userId, message.length);
 
     const response = await chatService.chat(userId, message);
 
@@ -25,7 +26,7 @@ export async function chatHandler(req: Request, res: Response) {
       ...response,
     });
   } catch (error: any) {
-    console.error("Lỗi chat:", error);
+    log.error("Chat error", error);
     res.status(500).json({
       success: false,
       error: error.message,

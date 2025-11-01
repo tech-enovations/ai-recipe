@@ -4,6 +4,7 @@ import { llmService } from "../services/llm.service";
 import { ragService } from "../services/rag.service";
 import { vectorStoreService } from "../services/vector-store.service";
 import { SUPPORTED_CATEGORIES, SUPPORTED_LANGUAGES, SupportedLanguage } from "../config/constants";
+import { log } from "../utils/logger";
 
 export async function generateRecipeHandler(req: Request, res: Response) {
   const { dishName, categories, category, language = "vi" } = req.body as {
@@ -46,7 +47,7 @@ export async function generateRecipeHandler(req: Request, res: Response) {
       lang = normalizedLang as SupportedLanguage;
     }
 
-    console.log(`Đang tạo công thức cho: ${dishName}`);
+    log.recipe.generating(dishName);
 
     // RAG retrieval
     const { context: ragContext, recipesFound } = await ragService.retrieveContext(
@@ -70,13 +71,14 @@ export async function generateRecipeHandler(req: Request, res: Response) {
 
     // Generate recipe
     const { result, duration } = await llmService.generateRecipe(prompt);
+    log.recipe.generated(result.dishName, duration);
 
     // Store in vector database
     if (vectorStoreService.isAvailable()) {
       try {
         await vectorStoreService.addRecipe(result, providedCategories, lang);
       } catch (storeError) {
-        console.error("⚠️  Failed to store recipe:", storeError);
+        log.error("Failed to store recipe", storeError);
       }
     }
 
@@ -90,7 +92,7 @@ export async function generateRecipeHandler(req: Request, res: Response) {
       },
     });
   } catch (error: any) {
-    console.error("Lỗi khi tạo công thức:", error);
+    log.error("Error generating recipe", error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -137,7 +139,7 @@ export async function searchRecipesHandler(req: Request, res: Response) {
       recipes,
     });
   } catch (error: any) {
-    console.error("Lỗi khi tìm kiếm công thức:", error);
+    log.error("Error searching recipes", error);
     res.status(500).json({
       success: false,
       error: "Không thể tìm kiếm công thức.",
@@ -194,7 +196,7 @@ export async function vectorStoreStatusHandler(req: Request, res: Response) {
       })),
     });
   } catch (error: any) {
-    console.error("Error checking vector store status:", error);
+    log.error("Error checking vector store status", error);
     res.status(500).json({
       initialized: true,
       error: error.message,

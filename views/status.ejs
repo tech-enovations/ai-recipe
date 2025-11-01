@@ -1,0 +1,264 @@
+<%- include('partials/header', { title: 'System Status - Chef AI', currentPage: 'status' }) %>
+
+<style>
+    .status-card {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 20px;
+    }
+    
+    .status-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .status-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .status-badge {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+    
+    .status-badge.healthy {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-badge.warning {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .status-badge.error {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    
+    .stat-item {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #667eea;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        color: #666;
+        font-size: 14px;
+    }
+    
+    .refresh-btn {
+        padding: 10px 20px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+    
+    .refresh-btn:hover {
+        background: #5568d3;
+    }
+    
+    .sample-recipes {
+        margin-top: 20px;
+    }
+    
+    .sample-item {
+        background: white;
+        padding: 12px;
+        margin-bottom: 8px;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+    
+    .code-block {
+        background: #2d3748;
+        color: #e2e8f0;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        overflow-x: auto;
+        margin-top: 10px;
+    }
+</style>
+
+<h1 style="color: #667eea; margin-bottom: 10px;">📊 System Status</h1>
+<p style="color: #666; margin-bottom: 30px;">Real-time monitoring dashboard</p>
+
+<button class="refresh-btn" onclick="loadStatus()">🔄 Refresh</button>
+
+<div id="statusContent">
+    <div style="text-align: center; padding: 40px;">
+        <div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
+        <p style="color: #666;">Loading system status...</p>
+    </div>
+</div>
+
+<script>
+    const API_URL = '<%= apiUrl %>';
+    
+    async function loadStatus() {
+        const contentDiv = document.getElementById('statusContent');
+        contentDiv.innerHTML = '<div style="text-align: center; padding: 40px;"><div style="font-size: 48px; margin-bottom: 20px;">⏳</div><p style="color: #666;">Loading...</p></div>';
+        
+        try {
+            // Fetch multiple endpoints
+            const [vectorStatus, chatSessions, health] = await Promise.all([
+                fetch(`${API_URL}/api/vector-store-status`).then(r => r.json()),
+                fetch(`${API_URL}/api/chat/sessions`).then(r => r.json()),
+                fetch(`${API_URL}/health`).then(r => r.json())
+            ]);
+            
+            renderStatus(vectorStatus, chatSessions, health);
+        } catch (error) {
+            contentDiv.innerHTML = '<div style="text-align: center; padding: 40px; color: #dc3545;">❌ Lỗi khi tải trạng thái</div>';
+            console.error('Status error:', error);
+        }
+    }
+    
+    function renderStatus(vectorStatus, chatSessions, health) {
+        const contentDiv = document.getElementById('statusContent');
+        
+        const html = `
+            <!-- System Health -->
+            <div class="status-card">
+                <div class="status-header">
+                    <div class="status-title">🏥 System Health</div>
+                    <span class="status-badge ${health.status === 'healthy' ? 'healthy' : 'error'}">
+                        ${health.status === 'healthy' ? '✅ Healthy' : '❌ Unhealthy'}
+                    </span>
+                </div>
+                <div class="stat-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">${health.vectorStore ? '✅' : '❌'}</div>
+                        <div class="stat-label">Vector Store</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${health.activeSessions || 0}</div>
+                        <div class="stat-label">Active Sessions</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">⚡</div>
+                        <div class="stat-label">Status: Online</div>
+                    </div>
+                </div>
+                <div class="code-block">
+                    Timestamp: ${health.timestamp}
+                </div>
+            </div>
+            
+            <!-- Vector Store -->
+            <div class="status-card">
+                <div class="status-header">
+                    <div class="status-title">🗄️ MongoDB Vector Store</div>
+                    <span class="status-badge ${vectorStatus.initialized ? 'healthy' : 'warning'}">
+                        ${vectorStatus.initialized ? '✅ Connected' : '⚠️ Not Connected'}
+                    </span>
+                </div>
+                ${vectorStatus.initialized ? `
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">${vectorStatus.recipeCount || 0}</div>
+                            <div class="stat-label">Total Recipes</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${vectorStatus.vectorSearchWorks ? '✅' : '❌'}</div>
+                            <div class="stat-label">Vector Search</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">768</div>
+                            <div class="stat-label">Embedding Dims</div>
+                        </div>
+                    </div>
+                    <div class="code-block">
+                        Index: ${vectorStatus.indexName || 'N/A'}
+                        ${vectorStatus.vectorSearchError ? '<br>Error: ' + vectorStatus.vectorSearchError : ''}
+                    </div>
+                    ${vectorStatus.sampleRecipes && vectorStatus.sampleRecipes.length > 0 ? `
+                        <div class="sample-recipes">
+                            <h4 style="margin: 15px 0 10px 0; color: #555;">Sample Recipes:</h4>
+                            ${vectorStatus.sampleRecipes.map(recipe => `
+                                <div class="sample-item">
+                                    📝 ${escapeHtml(recipe.dishName || 'N/A')}
+                                    ${recipe.categories ? ' - ' + recipe.categories.join(', ') : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                ` : `
+                    <p style="color: #999; padding: 20px; text-align: center;">
+                        ${vectorStatus.message || 'Vector store not configured'}
+                    </p>
+                `}
+            </div>
+            
+            <!-- Chat Sessions -->
+            <div class="status-card">
+                <div class="status-header">
+                    <div class="status-title">💬 Active Chat Sessions</div>
+                    <span class="status-badge healthy">${chatSessions.totalSessions || 0} Sessions</span>
+                </div>
+                ${chatSessions.sessions && chatSessions.sessions.length > 0 ? `
+                    <div class="sample-recipes">
+                        ${chatSessions.sessions.map(session => `
+                            <div class="sample-item">
+                                👤 ${escapeHtml(session.userId)}
+                                <br>
+                                <small style="color: #999;">
+                                    Created: ${new Date(session.createdAt).toLocaleString('vi-VN')}
+                                    | Last activity: ${new Date(session.lastActivity).toLocaleString('vi-VN')}
+                                </small>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <p style="color: #999; padding: 20px; text-align: center;">
+                        No active sessions
+                    </p>
+                `}
+            </div>
+        `;
+        
+        contentDiv.innerHTML = html;
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+    
+    // Auto-load on page load
+    loadStatus();
+    
+    // Auto-refresh every 10 seconds
+    setInterval(loadStatus, 10000);
+</script>
+
+<%- include('partials/footer') %>
+

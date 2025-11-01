@@ -3,6 +3,7 @@ import { Document } from "@langchain/core/documents";
 import { vectorStoreService } from "./vector-store.service";
 import { CATEGORY_PROMPT_HINTS, SupportedCategory } from "../config/constants";
 import { ENV } from "../config/env";
+import { log } from "../utils/logger";
 
 export class RAGService {
   async retrieveContext(
@@ -10,7 +11,7 @@ export class RAGService {
     categories: string[]
   ): Promise<{ context: string; recipesFound: number }> {
     if (!vectorStoreService.isAvailable()) {
-      console.log("⚠️  Vector store not available - skipping RAG");
+      log.warn("Vector store not available - skipping RAG");
       return { context: "", recipesFound: 0 };
     }
 
@@ -24,7 +25,7 @@ export class RAGService {
           : "";
       const enhancedQuery = `${dishName} món ăn công thức ${categoryContext}`.trim();
 
-      console.log(`🔍 Enhanced RAG search: "${enhancedQuery}"`);
+      log.rag.searching(enhancedQuery);
 
       // Retrieve with scores
       const resultsWithScore = await vectorStoreService.searchSimilarRecipes(
@@ -33,21 +34,19 @@ export class RAGService {
         ENV.RAG_SIMILARITY_THRESHOLD
       );
 
-      console.log(`📊 Retrieved ${resultsWithScore.length} candidates`);
+      log.rag.found(resultsWithScore.length, ENV.RAG_SIMILARITY_THRESHOLD);
 
       // Log similarity scores
       resultsWithScore.forEach(([doc, score]) => {
-        const similarity = (1 - score).toFixed(3);
-        console.log(
-          `   - ${doc.metadata?.dishName || "Unknown"}: similarity ${similarity}`
-        );
+        const similarity = 1 - score;
+        log.rag.similarity(doc.metadata?.dishName || "Unknown", similarity);
       });
 
       // Take top results
       const topResults = resultsWithScore.slice(0, ENV.RAG_CONTEXT_LIMIT);
 
       if (topResults.length === 0) {
-        console.log("⚠️  No recipes above threshold - generating from scratch");
+        log.warn("No recipes above threshold - generating from scratch");
         return { context: "", recipesFound: 0 };
       }
 
@@ -64,14 +63,14 @@ Thời gian: Chuẩn bị ${doc.metadata?.prepTime}, Nấu ${doc.metadata?.cookT
 
       const formattedContext = `\n\n=== THAM KHẢO CÁC CÔNG THỨC TƯƠNG TỰ ===\n${contextString}\n\n=== YÊU CẦU ===\nDựa vào các công thức trên, tạo công thức MỚI và SÁNG TẠO với phong cách riêng. Đảm bảo có ít nhất 3 bước chi tiết.`;
 
-      console.log(`✅ Using ${topResults.length} high-quality similar recipes`);
+      log.info(`Using ${topResults.length} high-quality similar recipes`);
 
       return {
         context: formattedContext,
         recipesFound: topResults.length,
       };
     } catch (error: any) {
-      console.error("⚠️  RAG retrieval failed:", error.message);
+      log.error("RAG retrieval failed", error);
       return { context: "", recipesFound: 0 };
     }
   }

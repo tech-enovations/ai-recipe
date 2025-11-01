@@ -4,6 +4,7 @@ import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { MongoClient, Collection } from "mongodb";
 import { Document } from "@langchain/core/documents";
 import { ENV } from "../config/env";
+import { log } from "../utils/logger";
 
 export class VectorStoreService {
   private client: MongoClient | null = null;
@@ -19,14 +20,14 @@ export class VectorStoreService {
 
   async initialize(): Promise<void> {
     if (!ENV.MONGODB_ATLAS_URI) {
-      console.warn("⚠️  MONGODB_ATLAS_URI not set. Vector store disabled.");
+      log.db.vectorStoreDisabled();
       return;
     }
 
     try {
       this.client = new MongoClient(ENV.MONGODB_ATLAS_URI);
       await this.client.connect();
-      console.log("✅ MongoDB connected");
+      log.db.connected();
 
       const collection = this.client
         .db(ENV.MONGODB_ATLAS_DB_NAME)
@@ -39,16 +40,16 @@ export class VectorStoreService {
         embeddingKey: "embedding",
       });
 
-      console.log("✅ Vector store initialized");
+      log.db.vectorStoreInit();
     } catch (error) {
-      console.error("❌ Failed to initialize vector store:", error);
+      log.error("Failed to initialize vector store", error);
       this.vectorStore = null;
     }
   }
 
   async addRecipe(recipe: any, categories: string[], language: string): Promise<void> {
     if (!this.vectorStore) {
-      console.warn("⚠️  Vector store not available");
+      log.warn("Vector store not available");
       return;
     }
 
@@ -71,7 +72,7 @@ export class VectorStoreService {
     });
 
     await this.vectorStore.addDocuments([doc]);
-    console.log(`✅ Recipe stored: ${recipe.dishName}`);
+    log.recipe.stored(recipe.dishName);
   }
 
   async searchSimilarRecipes(
@@ -114,7 +115,7 @@ export class VectorStoreService {
   async close(): Promise<void> {
     if (this.client) {
       await this.client.close();
-      console.log("✅ MongoDB connection closed");
+      log.db.disconnected();
     }
   }
 

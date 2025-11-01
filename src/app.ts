@@ -35,11 +35,49 @@ app.set("views", path.join(__dirname, "../views"));
 app.use("/api", recipeRoutes);
 app.use("/api", chatRoutes);
 
-// Home page with EJS
+// View routes
+const apiUrl = ENV.NODE_ENV === "production" 
+  ? "https://ai-recipe-node.vercel.app" 
+  : `http://localhost:${ENV.PORT}`;
+
 app.get("/", (req, res) => {
   res.render("index", {
     title: "AI Recipe Generator",
-    apiUrl: `http://localhost:${ENV.PORT}`,
+    apiUrl,
+    currentPage: "home",
+  });
+});
+
+app.get("/demo", (req, res) => {
+  res.render("demo", {
+    title: "Stream Demo",
+    apiUrl,
+    currentPage: "demo",
+    defaultDish: "",
+  });
+});
+
+app.get("/chat-ui", (req, res) => {
+  res.render("chat", {
+    title: "Chat Assistant",
+    apiUrl,
+    currentPage: "chat",
+  });
+});
+
+app.get("/search-ui", (req, res) => {
+  res.render("search", {
+    title: "Search Recipes",
+    apiUrl,
+    currentPage: "search",
+  });
+});
+
+app.get("/status", (req, res) => {
+  res.render("status", {
+    title: "System Status",
+    apiUrl,
+    currentPage: "status",
   });
 });
 

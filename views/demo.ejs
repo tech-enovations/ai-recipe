@@ -1,0 +1,387 @@
+<%- include('partials/header', { title: 'Stream Demo - Chef AI', currentPage: 'demo' }) %>
+
+<style>
+    .input-group {
+        margin-bottom: 20px;
+    }
+    
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    input, select {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+    }
+    
+    input:focus, select:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+    
+    .btn-primary {
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    
+    .btn-primary:hover { transform: translateY(-2px); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    
+    .progress-container {
+        margin-top: 30px;
+        display: none;
+    }
+    
+    .progress-container.active { display: block; }
+    
+    .progress-bar-wrapper {
+        background: #f0f0f0;
+        border-radius: 10px;
+        height: 30px;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+    
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        width: 0%;
+        transition: width 0.5s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .phase-item {
+        padding: 15px;
+        margin-bottom: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #e0e0e0;
+        opacity: 0.5;
+        transition: all 0.3s;
+    }
+    
+    .phase-item.active {
+        opacity: 1;
+        border-left-color: #667eea;
+        background: #f0f4ff;
+    }
+    
+    .phase-item.complete {
+        opacity: 1;
+        border-left-color: #10b981;
+        background: #f0fdf4;
+    }
+    
+    .result-container {
+        margin-top: 30px;
+        display: none;
+    }
+    
+    .result-container.active { display: block; }
+    
+    .recipe-card {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+    }
+    
+    .recipe-title {
+        font-size: 24px;
+        color: #667eea;
+        font-weight: 700;
+        margin-bottom: 15px;
+    }
+    
+    .recipe-meta {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .recipe-meta span {
+        background: white;
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 14px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .recipe-section {
+        margin-bottom: 25px;
+    }
+    
+    .recipe-section h3 {
+        color: #333;
+        margin-bottom: 12px;
+    }
+    
+    .ingredient-item, .step-item {
+        padding: 12px;
+        background: white;
+        margin-bottom: 8px;
+        border-radius: 8px;
+    }
+    
+    .step-item {
+        border-left: 3px solid #667eea;
+    }
+</style>
+
+<h1 style="color: #667eea; margin-bottom: 10px;">🎬 SSE Streaming Demo</h1>
+<p style="color: #666; margin-bottom: 30px;">Xem tiến trình tạo công thức real-time</p>
+
+<div class="input-group">
+    <label for="dishName">Tên món ăn</label>
+    <input type="text" id="dishName" placeholder="Ví dụ: Phở Bò, Bún Chả..." value="<%= defaultDish || '' %>" />
+</div>
+
+<div class="input-group">
+    <label for="categories">Thể loại</label>
+    <select id="categories" multiple size="3">
+        <option value="quick">Quick (Nhanh)</option>
+        <option value="easy">Easy (Dễ làm)</option>
+        <option value="healthy">Healthy (Lành mạnh)</option>
+    </select>
+</div>
+
+<div class="input-group">
+    <label for="language">Ngôn ngữ</label>
+    <select id="language">
+        <option value="vi" selected>Tiếng Việt</option>
+        <option value="eng">English</option>
+    </select>
+</div>
+
+<button class="btn-primary" id="generateBtn" onclick="generateRecipe()">🚀 Tạo công thức</button>
+
+<div class="progress-container" id="progressContainer">
+    <div class="progress-bar-wrapper">
+        <div class="progress-bar" id="progressBar">0%</div>
+    </div>
+    
+    <div id="phasesList">
+        <div class="phase-item" id="phase-1">
+            <div style="font-weight: 600;">1️⃣ Chuẩn bị</div>
+            <div style="color: #666; font-size: 14px; margin-top: 5px;" class="phase-message">Đang chờ...</div>
+        </div>
+        <div class="phase-item" id="phase-2">
+            <div style="font-weight: 600;">2️⃣ Tìm kiếm RAG</div>
+            <div style="color: #666; font-size: 14px; margin-top: 5px;" class="phase-message">Đang chờ...</div>
+        </div>
+        <div class="phase-item" id="phase-3">
+            <div style="font-weight: 600;">3️⃣ Tạo công thức với AI</div>
+            <div style="color: #666; font-size: 14px; margin-top: 5px;" class="phase-message">Đang chờ...</div>
+        </div>
+        <div class="phase-item" id="phase-4">
+            <div style="font-weight: 600;">4️⃣ Lưu vào database</div>
+            <div style="color: #666; font-size: 14px; margin-top: 5px;" class="phase-message">Đang chờ...</div>
+        </div>
+        <div class="phase-item" id="phase-5">
+            <div style="font-weight: 600;">5️⃣ Hoàn thành</div>
+            <div style="color: #666; font-size: 14px; margin-top: 5px;" class="phase-message">Đang chờ...</div>
+        </div>
+    </div>
+</div>
+
+<div class="result-container" id="resultContainer">
+    <div class="recipe-card" id="recipeCard"></div>
+</div>
+
+<script>
+    const API_URL = '<%= apiUrl %>';
+    
+    function generateRecipe() {
+        const dishName = document.getElementById('dishName').value;
+        const categories = Array.from(document.getElementById('categories').selectedOptions).map(opt => opt.value);
+        const language = document.getElementById('language').value;
+        
+        if (!dishName) {
+            alert('Vui lòng nhập tên món ăn!');
+            return;
+        }
+        
+        // Reset UI
+        document.getElementById('progressContainer').classList.add('active');
+        document.getElementById('resultContainer').classList.remove('active');
+        document.getElementById('generateBtn').disabled = true;
+        
+        // Reset phases
+        for (let i = 1; i <= 5; i++) {
+            const phase = document.getElementById(`phase-${i}`);
+            phase.classList.remove('active', 'complete');
+            phase.querySelector('.phase-message').textContent = 'Đang chờ...';
+        }
+        
+        // SSE streaming
+        fetch(`${API_URL}/api/generate-recipe-stream`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dishName, categories, language })
+        }).then(response => {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            
+            function readStream() {
+                reader.read().then(({ done, value }) => {
+                    if (done) {
+                        document.getElementById('generateBtn').disabled = false;
+                        return;
+                    }
+                    
+                    const text = decoder.decode(value);
+                    const lines = text.split('\n');
+                    
+                    let currentEvent = null;
+                    let currentData = '';
+                    
+                    lines.forEach(line => {
+                        if (line.startsWith('event:')) {
+                            currentEvent = line.substring(7).trim();
+                        } else if (line.startsWith('data:')) {
+                            currentData = line.substring(6).trim();
+                            
+                            if (currentEvent && currentData) {
+                                try {
+                                    const data = JSON.parse(currentData);
+                                    handleEvent(currentEvent, data);
+                                } catch (e) {
+                                    console.error('Parse error:', e);
+                                }
+                                currentEvent = null;
+                                currentData = '';
+                            }
+                        }
+                    });
+                    
+                    readStream();
+                });
+            }
+            
+            readStream();
+        }).catch(err => {
+            alert('Lỗi: ' + err.message);
+            document.getElementById('generateBtn').disabled = false;
+        });
+    }
+    
+    function handleEvent(event, data) {
+        switch (event) {
+            case 'phase':
+                updatePhase(data.phase, data.message, data.progress, 'active');
+                if (data.phase > 1) {
+                    updatePhase(data.phase - 1, '', 0, 'complete');
+                }
+                break;
+            case 'rag':
+                const phase2 = document.getElementById('phase-2');
+                if (phase2) {
+                    phase2.querySelector('.phase-message').textContent = data.message;
+                }
+                break;
+            case 'complete':
+                updatePhase(5, data.message, 100, 'complete');
+                displayRecipe(data.recipe, data.duration);
+                document.getElementById('generateBtn').disabled = false;
+                break;
+            case 'error':
+                alert('Lỗi: ' + data.message);
+                document.getElementById('generateBtn').disabled = false;
+                break;
+        }
+    }
+    
+    function updatePhase(phaseNum, message, progress, status) {
+        const phase = document.getElementById(`phase-${phaseNum}`);
+        if (!phase) return;
+        
+        if (message) {
+            const msgEl = phase.querySelector('.phase-message');
+            if (msgEl) msgEl.textContent = message;
+        }
+        
+        if (status === 'active') {
+            phase.classList.add('active');
+            phase.classList.remove('complete');
+        } else if (status === 'complete') {
+            phase.classList.remove('active');
+            phase.classList.add('complete');
+        }
+        
+        if (progress) {
+            const bar = document.getElementById('progressBar');
+            if (bar) {
+                bar.style.width = progress + '%';
+                bar.textContent = progress + '%';
+            }
+        }
+    }
+    
+    function displayRecipe(recipe, duration) {
+        document.getElementById('resultContainer').classList.add('active');
+        
+        let sortedSteps = [];
+        if (Array.isArray(recipe.steps)) {
+            sortedSteps = recipe.steps.sort((a, b) => a.stepNumber - b.stepNumber);
+        }
+        
+        const html = `
+            <div class="recipe-title">${escapeHtml(recipe.dishName)}</div>
+            <p style="margin-bottom: 20px; color: #555; line-height: 1.6;">${escapeHtml(recipe.description)}</p>
+            <div class="recipe-meta">
+                <span>⏱️ ${escapeHtml(recipe.prepTime)}</span>
+                <span>🔥 ${escapeHtml(recipe.cookTime)}</span>
+                <span>👥 ${escapeHtml(recipe.servings)}</span>
+                <span>⚡ ${duration}</span>
+            </div>
+            <div class="recipe-section">
+                <h3>📝 Nguyên liệu (${recipe.ingredients.length})</h3>
+                ${recipe.ingredients.map((ing, idx) => 
+                    `<div class="ingredient-item">
+                        <span style="color: #667eea; font-weight: 600;">${idx + 1}.</span>
+                        ${escapeHtml(ing.name)}: <strong>${escapeHtml(ing.quantity)}</strong>
+                    </div>`
+                ).join('')}
+            </div>
+            <div class="recipe-section">
+                <h3>👨‍🍳 Các bước thực hiện (${sortedSteps.length})</h3>
+                ${sortedSteps.map(step => `
+                    <div class="step-item">
+                        <strong style="color: #667eea;">${step.stepNumber}.</strong>
+                        ${escapeHtml(step.description)}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        document.getElementById('recipeCard').innerHTML = html;
+        document.getElementById('resultContainer').scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+</script>
+
+<%- include('partials/footer') %>
+

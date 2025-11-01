@@ -1,0 +1,331 @@
+<%- include('partials/header', { title: 'Chat Assistant - Chef AI', currentPage: 'chat' }) %>
+
+<style>
+    .chat-container {
+        display: flex;
+        flex-direction: column;
+        height: 600px;
+        background: #f8f9fa;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    .chat-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        text-align: center;
+    }
+    
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+    }
+    
+    .message {
+        margin-bottom: 15px;
+        display: flex;
+        gap: 10px;
+    }
+    
+    .message.user {
+        justify-content: flex-end;
+    }
+    
+    .message-bubble {
+        max-width: 70%;
+        padding: 12px 16px;
+        border-radius: 16px;
+        line-height: 1.6;
+    }
+    
+    .message.user .message-bubble {
+        background: #667eea;
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+    
+    .message.ai .message-bubble {
+        background: white;
+        color: #333;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .message-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 18px;
+    }
+    
+    .message.user .message-avatar {
+        background: #667eea;
+    }
+    
+    .message.ai .message-avatar {
+        background: #10b981;
+    }
+    
+    .chat-input-container {
+        padding: 20px;
+        background: white;
+        border-top: 1px solid #e0e0e0;
+        display: flex;
+        gap: 10px;
+    }
+    
+    .chat-input {
+        flex: 1;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 24px;
+        font-size: 16px;
+    }
+    
+    .chat-input:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+    
+    .send-btn {
+        padding: 12px 24px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 24px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.3s;
+    }
+    
+    .send-btn:hover {
+        background: #5568d3;
+    }
+    
+    .send-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .typing-indicator {
+        display: none;
+        padding: 10px;
+        color: #999;
+        font-style: italic;
+    }
+    
+    .typing-indicator.active {
+        display: block;
+    }
+    
+    .user-id-input {
+        margin-bottom: 20px;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        width: 100%;
+    }
+    
+    .info-box {
+        background: #e7f3ff;
+        border-left: 4px solid #667eea;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .clear-btn {
+        background: #dc3545;
+        padding: 8px 16px;
+        border: none;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 10px;
+    }
+    
+    .clear-btn:hover {
+        background: #c82333;
+    }
+</style>
+
+<h1 style="color: #667eea; margin-bottom: 10px;">💬 Chat với Chef AI</h1>
+<p style="color: #666; margin-bottom: 20px;">Trợ lý ảo với memory - nhớ ngữ cảnh cuộc trò chuyện</p>
+
+<div class="info-box">
+    <strong>💡 Gợi ý câu hỏi:</strong>
+    <ul style="margin-top: 10px; margin-left: 20px;">
+        <li>Tôi có gà và rau củ, nên nấu món gì?</li>
+        <li>Món ăn nhanh cho người bận rộn?</li>
+        <li>Cách làm phở ngon?</li>
+        <li>Món ăn healthy cho người ăn kiêng?</li>
+    </ul>
+</div>
+
+<div style="margin-bottom: 20px;">
+    <label style="font-weight: 600; display: block; margin-bottom: 8px;">User ID (để lưu lịch sử):</label>
+    <input type="text" id="userId" class="user-id-input" placeholder="Nhập user ID của bạn (vd: user123)" value="demo_user" />
+    <button class="clear-btn" onclick="clearHistory()">🗑️ Xóa lịch sử chat</button>
+</div>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <h2 style="margin: 0;">👨‍🍳 Chef AI Assistant</h2>
+        <p style="margin-top: 5px; opacity: 0.9; font-size: 14px;">Powered by Google Gemini with RAG</p>
+    </div>
+    
+    <div class="chat-messages" id="chatMessages">
+        <div class="message ai">
+            <div class="message-avatar">🤖</div>
+            <div class="message-bubble">
+                Xin chào! Tôi là Chef AI. Tôi có thể giúp bạn tìm công thức nấu ăn, tư vấn nguyên liệu, hoặc gợi ý món ăn phù hợp. Bạn cần giúp gì? 😊
+            </div>
+        </div>
+    </div>
+    
+    <div class="typing-indicator" id="typingIndicator">
+        Chef AI đang suy nghĩ...
+    </div>
+    
+    <div class="chat-input-container">
+        <input 
+            type="text" 
+            id="messageInput" 
+            class="chat-input" 
+            placeholder="Nhập câu hỏi của bạn..." 
+            onkeypress="handleKeyPress(event)"
+        />
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">Gửi</button>
+    </div>
+</div>
+
+<script>
+    const API_URL = '<%= apiUrl %>';
+    
+    async function sendMessage() {
+        const userId = document.getElementById('userId').value.trim();
+        const message = document.getElementById('messageInput').value.trim();
+        
+        if (!userId) {
+            alert('Vui lòng nhập User ID!');
+            return;
+        }
+        
+        if (!message) {
+            alert('Vui lòng nhập tin nhắn!');
+            return;
+        }
+        
+        // Add user message to UI
+        addMessage('user', message);
+        document.getElementById('messageInput').value = '';
+        document.getElementById('sendBtn').disabled = true;
+        document.getElementById('typingIndicator').classList.add('active');
+        
+        try {
+            const response = await fetch(`${API_URL}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, message })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                addMessage('ai', data.message);
+                
+                // Update session info
+                if (data.sessionInfo) {
+                    console.log('Messages in history:', data.sessionInfo.messageCount);
+                }
+            } else {
+                addMessage('ai', 'Xin lỗi, đã có lỗi xảy ra: ' + (data.error || 'Unknown'));
+            }
+        } catch (error) {
+            addMessage('ai', 'Lỗi kết nối. Vui lòng thử lại!');
+            console.error('Chat error:', error);
+        } finally {
+            document.getElementById('sendBtn').disabled = false;
+            document.getElementById('typingIndicator').classList.remove('active');
+        }
+    }
+    
+    function addMessage(type, text) {
+        const messagesDiv = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        
+        const avatar = type === 'user' ? '👤' : '🤖';
+        
+        messageDiv.innerHTML = `
+            <div class="message-avatar">${avatar}</div>
+            <div class="message-bubble">${escapeHtml(text)}</div>
+        `;
+        
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+    
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    }
+    
+    async function clearHistory() {
+        const userId = document.getElementById('userId').value.trim();
+        
+        if (!userId) {
+            alert('Vui lòng nhập User ID!');
+            return;
+        }
+        
+        if (!confirm('Bạn có chắc muốn xóa lịch sử chat?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${API_URL}/api/chat/history/${userId}`, {
+                method: 'DELETE'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                alert(data.message);
+                // Clear UI
+                const messagesDiv = document.getElementById('chatMessages');
+                messagesDiv.innerHTML = `
+                    <div class="message ai">
+                        <div class="message-avatar">🤖</div>
+                        <div class="message-bubble">
+                            Lịch sử đã được xóa. Tôi là Chef AI. Tôi có thể giúp gì cho bạn? 😊
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            alert('Lỗi khi xóa lịch sử!');
+            console.error(error);
+        }
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Auto-focus on input
+    document.getElementById('messageInput').focus();
+</script>
+
+<%- include('partials/footer') %>
+

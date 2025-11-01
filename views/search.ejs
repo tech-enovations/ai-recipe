@@ -1,0 +1,193 @@
+<%- include('partials/header', { title: 'Tìm kiếm Công thức - Chef AI', currentPage: 'search' }) %>
+
+<style>
+    .search-box {
+        margin-bottom: 30px;
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 15px 20px;
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        font-size: 16px;
+        margin-bottom: 15px;
+    }
+    
+    .search-input:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+    
+    .search-btn {
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    
+    .search-btn:hover {
+        transform: translateY(-2px);
+    }
+    
+    .results-container {
+        margin-top: 30px;
+    }
+    
+    .recipe-card {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 15px;
+        border-left: 4px solid #667eea;
+        transition: all 0.3s;
+    }
+    
+    .recipe-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .recipe-name {
+        font-size: 20px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 10px;
+    }
+    
+    .recipe-description {
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 15px;
+    }
+    
+    .recipe-meta {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        font-size: 14px;
+    }
+    
+    .meta-tag {
+        background: white;
+        padding: 4px 10px;
+        border-radius: 6px;
+        color: #667eea;
+    }
+    
+    .no-results {
+        text-align: center;
+        padding: 40px;
+        color: #999;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 20px;
+        color: #667eea;
+    }
+</style>
+
+<h1 style="color: #667eea; margin-bottom: 10px;">🔍 Tìm kiếm Công thức</h1>
+<p style="color: #666; margin-bottom: 30px;">Semantic search với MongoDB Atlas Vector Store</p>
+
+<div class="search-box">
+    <input 
+        type="text" 
+        id="searchInput" 
+        class="search-input" 
+        placeholder="Tìm kiếm công thức... (vd: món ăn nhanh cho người bận rộn)" 
+        onkeypress="handleSearchKeyPress(event)"
+    />
+    <button class="search-btn" onclick="searchRecipes()">🔍 Tìm kiếm</button>
+</div>
+
+<div class="results-container" id="resultsContainer"></div>
+
+<script>
+    const API_URL = '<%= apiUrl %>';
+    
+    async function searchRecipes() {
+        const query = document.getElementById('searchInput').value.trim();
+        
+        if (!query) {
+            alert('Vui lòng nhập từ khóa tìm kiếm!');
+            return;
+        }
+        
+        const resultsDiv = document.getElementById('resultsContainer');
+        resultsDiv.innerHTML = '<div class="loading">⏳ Đang tìm kiếm...</div>';
+        
+        try {
+            const response = await fetch(`${API_URL}/api/search-recipes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query, limit: 10 })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                if (data.recipes.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="no-results">
+                            <p>😔 Không tìm thấy công thức nào</p>
+                            <p style="margin-top: 10px; font-size: 14px;">Thử từ khóa khác hoặc tạo công thức mới!</p>
+                        </div>
+                    `;
+                } else {
+                    const html = `
+                        <h3 style="color: #333; margin-bottom: 20px;">
+                            Tìm thấy ${data.count} công thức cho "${escapeHtml(query)}"
+                        </h3>
+                        ${data.recipes.map(recipe => `
+                            <div class="recipe-card">
+                                <div class="recipe-name">${escapeHtml(recipe.dishName)}</div>
+                                <div class="recipe-description">${escapeHtml(recipe.description || 'Không có mô tả')}</div>
+                                <div class="recipe-meta">
+                                    <span class="meta-tag">⏱️ ${escapeHtml(recipe.prepTime)}</span>
+                                    <span class="meta-tag">🔥 ${escapeHtml(recipe.cookTime)}</span>
+                                    <span class="meta-tag">👥 ${escapeHtml(recipe.servings)}</span>
+                                    ${recipe.categories && recipe.categories.length > 0 
+                                        ? recipe.categories.map(cat => `<span class="meta-tag">🏷️ ${cat}</span>`).join('')
+                                        : ''
+                                    }
+                                </div>
+                            </div>
+                        `).join('')}
+                    `;
+                    resultsDiv.innerHTML = html;
+                }
+            } else {
+                resultsDiv.innerHTML = `<div class="no-results">❌ Lỗi: ${data.error}</div>`;
+            }
+        } catch (error) {
+            resultsDiv.innerHTML = '<div class="no-results">❌ Lỗi kết nối!</div>';
+            console.error('Search error:', error);
+        }
+    }
+    
+    function handleSearchKeyPress(event) {
+        if (event.key === 'Enter') {
+            searchRecipes();
+        }
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+    
+    // Auto-focus
+    document.getElementById('searchInput').focus();
+</script>
+
+<%- include('partials/footer') %>
+

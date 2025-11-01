@@ -9,6 +9,7 @@ import {
   SystemMessagePromptTemplate,
 } from "@langchain/core/prompts";
 import { ENV } from "../config/env";
+import { log } from "../utils/logger";
 import { llmService } from "./llm.service";
 import { vectorStoreService } from "./vector-store.service";
 
@@ -38,7 +39,7 @@ export class ChatService {
       const inactiveTime = now.getTime() - session.lastActivity.getTime();
       if (inactiveTime > ENV.SESSION_INACTIVITY_TIMEOUT) {
         this.userSessions.delete(userId);
-        console.log(`🗑️  Cleaned up inactive session: ${userId}`);
+        log.chat.sessionCleaned(userId);
       }
     }
   }
@@ -108,7 +109,7 @@ NGÔN NGỮ: Tự động detect và trả lời bằng ngôn ngữ user dùng.`
       };
 
       this.userSessions.set(userId, session);
-      console.log(`✨ Created persistent session: ${userId}`);
+      log.chat.sessionCreated(userId);
     } else {
       session.lastActivity = new Date();
     }
@@ -141,10 +142,10 @@ NGÔN NGỮ: Tự động detect và trả lời bằng ngôn ngữ user dùng.`
                   }`
               )
               .join("\n");
-          console.log(`   🔍 Enhanced with ${searchResults.length} recipes`);
+          log.debug(`Chat enhanced with ${searchResults.length} recipes`);
         }
       } catch (err) {
-        console.warn("   ⚠️  RAG enhancement failed");
+        log.warn("Chat RAG enhancement failed");
       }
     }
 
