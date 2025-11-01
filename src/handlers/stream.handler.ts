@@ -62,17 +62,16 @@ export async function generateRecipeStreamHandler(req: Request, res: Response) {
       providedCategories
     );
 
-    if (recipesFound > 0) {
-      sendEvent("rag", {
-        found: recipesFound,
-        message: `Tìm thấy ${recipesFound} công thức tương tự`,
-      });
-    } else {
-      sendEvent("rag", {
-        found: 0,
-        message: "Không tìm thấy công thức tương tự, sẽ tạo mới từ đầu",
-      });
-    }
+    // Update phase 2 with result
+    sendEvent("phase", {
+      phase: 2,
+      name: "Tìm kiếm",
+      message: recipesFound > 0 
+        ? `✓ Tìm thấy ${recipesFound} công thức tương tự` 
+        : "✓ Không tìm thấy công thức tương tự, sẽ tạo mới",
+      progress: 35,
+      complete: true,
+    });
 
     // Phase 3: Generate with AI
     sendEvent("phase", {
@@ -100,6 +99,15 @@ export async function generateRecipeStreamHandler(req: Request, res: Response) {
 
     const { result, duration } = await llmService.generateRecipe(prompt);
 
+    // Update phase 3 complete
+    sendEvent("phase", {
+      phase: 3,
+      name: "Tạo công thức",
+      message: `✓ Đã tạo xong công thức (${duration}ms)`,
+      progress: 70,
+      complete: true,
+    });
+
     // Add metadata
     const enrichedResult = {
       ...result,
@@ -107,32 +115,38 @@ export async function generateRecipeStreamHandler(req: Request, res: Response) {
       generationTime: `${duration}ms`,
     };
 
-    // Phase 4: Store in database
+    // Phase 4: Finalize
     sendEvent("phase", {
       phase: 4,
-      name: "Xử lý kết quả",
-      message: "Đang lưu trữ công thức...",
+      name: "Hoàn thiện",
+      message: "Đang chuẩn bị công thức...",
       progress: 80,
     });
 
     if (vectorStoreService.isAvailable()) {
       try {
         await vectorStoreService.addRecipe(result, providedCategories, language);
-        sendEvent("stored", { message: "Đã lưu công thức vào cơ sở dữ liệu" });
       } catch (storeError) {
         log.error("Failed to store recipe in stream", storeError);
-        sendEvent("warning", {
-          message: "Lưu công thức thất bại, nhưng vẫn trả về kết quả",
-        });
       }
     }
+
+    // Update phase 4 complete
+    sendEvent("phase", {
+      phase: 4,
+      name: "Hoàn thiện",
+      message: "✓ Công thức đã sẵn sàng!",
+      progress: 90,
+      complete: true,
+    });
 
     // Phase 5: Complete
     sendEvent("phase", {
       phase: 5,
       name: "Hoàn thành",
-      message: "Công thức đã sẵn sàng!",
+      message: "✓ Tạo công thức thành công!",
       progress: 100,
+      complete: true,
     });
 
     sendEvent("complete", {
