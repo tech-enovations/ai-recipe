@@ -55,6 +55,14 @@ app.get("/demo", (req, res) => {
   });
 });
 
+app.get("/suggest", (req, res) => {
+  res.render("suggest", {
+    title: "Suggest Recipes",
+    apiUrl,
+    currentPage: "suggest",
+  });
+});
+
 app.get("/chat-ui", (req, res) => {
   res.render("chat", {
     title: "Chat Assistant",
