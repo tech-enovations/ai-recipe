@@ -1,0 +1,327 @@
+<%- include('partials/header', { title: 'Gợi ý Món Ăn - Chef AI', currentPage: 'suggest' }) %>
+
+<style>
+    .ingredient-input-container {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+    }
+    
+    .ingredient-input-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .ingredient-input {
+        flex: 1;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+    }
+    
+    .ingredient-input:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+    
+    .add-btn, .remove-btn {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    .add-btn {
+        background: #10b981;
+        color: white;
+    }
+    
+    .add-btn:hover {
+        background: #059669;
+    }
+    
+    .remove-btn {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .remove-btn:hover {
+        background: #c82333;
+    }
+    
+    .ingredient-tag {
+        display: inline-block;
+        background: #667eea;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        margin: 5px;
+        font-size: 14px;
+    }
+    
+    .option-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .option-card {
+        padding: 15px;
+        background: #f8f9fa;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+    }
+    
+    .option-card:hover {
+        border-color: #667eea;
+        background: #f0f4ff;
+    }
+    
+    .option-card.selected {
+        border-color: #667eea;
+        background: #667eea;
+        color: white;
+    }
+    
+    .suggest-btn {
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 18px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    
+    .suggest-btn:hover {
+        transform: translateY(-2px);
+    }
+    
+    .suggest-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .suggestions-container {
+        margin-top: 30px;
+    }
+    
+    .suggestion-content {
+        background: #f8f9fa;
+        padding: 25px;
+        border-radius: 12px;
+        line-height: 1.8;
+    }
+</style>
+
+<!-- Marked.js for Markdown -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<h1 style="color: #667eea; margin-bottom: 10px;">🥘 Gợi Ý Món Từ Nguyên Liệu</h1>
+<p style="color: #666; margin-bottom: 30px;">Nhập nguyên liệu bạn có, AI sẽ gợi ý món có thể làm</p>
+
+<div class="ingredient-input-container">
+    <h3 style="margin-bottom: 15px; color: #333;">📝 Nguyên liệu bạn có:</h3>
+    
+    <div id="ingredientsList">
+        <div class="ingredient-input-row">
+            <input type="text" class="ingredient-input" placeholder="Vd: 2 củ hành baro" data-ingredient-input />
+            <button class="add-btn" onclick="addIngredientInput()">➕ Thêm</button>
+        </div>
+    </div>
+    
+    <div id="ingredientTags" style="margin-top: 15px;"></div>
+</div>
+
+<div style="margin-bottom: 20px;">
+    <h3 style="margin-bottom: 15px; color: #333;">🍽️ Phong cách nấu ăn:</h3>
+    <div class="option-group">
+        <div class="option-card" data-style="any" onclick="selectStyle('any')">
+            <div style="font-size: 32px; margin-bottom: 8px;">🍴</div>
+            <strong>Bất kỳ</strong>
+        </div>
+        <div class="option-card selected" data-style="dry" onclick="selectStyle('dry')">
+            <div style="font-size: 32px; margin-bottom: 8px;">🥘</div>
+            <strong>Món khô</strong>
+            <div style="font-size: 12px; margin-top: 4px;">Xào, rim, nướng</div>
+        </div>
+        <div class="option-card" data-style="soup" onclick="selectStyle('soup')">
+            <div style="font-size: 32px; margin-bottom: 8px;">🍜</div>
+            <strong>Món nước</strong>
+            <div style="font-size: 12px; margin-top: 4px;">Canh, súp, lẩu</div>
+        </div>
+    </div>
+</div>
+
+<div style="margin-bottom: 20px;">
+    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Số người ăn:</label>
+    <select id="servingSize" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;">
+        <option value="">Mặc định (2-4 người)</option>
+        <option value="1">1 người</option>
+        <option value="2">2 người</option>
+        <option value="4" selected>4 người</option>
+        <option value="6">6 người</option>
+    </select>
+</div>
+
+<button class="suggest-btn" id="suggestBtn" onclick="getSuggestions()">
+    🎯 Gợi Ý Món Ăn
+</button>
+
+<div class="suggestions-container" id="suggestionsContainer"></div>
+
+<script>
+    const API_URL = '<%= apiUrl %>';
+    let currentStyle = 'dry';
+    let ingredientsList = [];
+    
+    function addIngredientInput() {
+        const container = document.getElementById('ingredientsList');
+        const newRow = document.createElement('div');
+        newRow.className = 'ingredient-input-row';
+        newRow.innerHTML = `
+            <input type="text" class="ingredient-input" placeholder="Vd: 200g tôm" data-ingredient-input />
+            <button class="remove-btn" onclick="removeIngredientInput(this)">➖</button>
+        `;
+        container.appendChild(newRow);
+        newRow.querySelector('input').focus();
+    }
+    
+    function removeIngredientInput(btn) {
+        btn.parentElement.remove();
+    }
+    
+    function selectStyle(style) {
+        currentStyle = style;
+        document.querySelectorAll('.option-card').forEach(card => {
+            if (card.dataset.style === style) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        });
+    }
+    
+    async function getSuggestions() {
+        // Collect all ingredients
+        const inputs = document.querySelectorAll('[data-ingredient-input]');
+        ingredientsList = Array.from(inputs)
+            .map(input => input.value.trim())
+            .filter(val => val.length > 0);
+        
+        if (ingredientsList.length === 0) {
+            alert('Vui lòng nhập ít nhất 1 nguyên liệu!');
+            return;
+        }
+        
+        const servingSizeValue = document.getElementById('servingSize').value;
+        const servingSize = servingSizeValue ? parseInt(servingSizeValue) : undefined;
+        
+        document.getElementById('suggestBtn').disabled = true;
+        document.getElementById('suggestionsContainer').innerHTML = `
+            <div style="text-align: center; padding: 40px;">
+                <div style="font-size: 48px; margin-bottom: 15px;">🤔</div>
+                <p style="color: #666;">Chef AI đang suy nghĩ món gì phù hợp...</p>
+            </div>
+        `;
+        
+        try {
+            const response = await fetch(`${API_URL}/api/suggest-from-ingredients`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ingredients: ingredientsList,
+                    cookingStyle: currentStyle,
+                    servingSize,
+                    language: 'vi'
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                displaySuggestions(data);
+            } else {
+                document.getElementById('suggestionsContainer').innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #dc3545;">
+                        ❌ Lỗi: ${data.error}
+                    </div>
+                `;
+            }
+        } catch (error) {
+            document.getElementById('suggestionsContainer').innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #dc3545;">
+                    ❌ Lỗi kết nối!
+                </div>
+            `;
+            console.error('Suggest error:', error);
+        } finally {
+            document.getElementById('suggestBtn').disabled = false;
+        }
+    }
+    
+    function displaySuggestions(data) {
+        // Parse markdown with marked.js
+        let htmlContent = '';
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({
+                breaks: true,
+                gfm: true
+            });
+            htmlContent = marked.parse(data.suggestions);
+        } else {
+            htmlContent = data.suggestions.replace(/\n/g, '<br>');
+        }
+        
+        const html = `
+            <h2 style="color: #667eea; margin-bottom: 15px;">🎯 Gợi Ý Món Ăn</h2>
+            <div style="background: #e7f3ff; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #667eea;">
+                <strong>Nguyên liệu của bạn:</strong><br>
+                ${ingredientsList.map(ing => `<span class="ingredient-tag">${escapeHtml(ing)}</span>`).join('')}
+            </div>
+            <div class="suggestion-content">
+                ${htmlContent}
+            </div>
+            <div style="margin-top: 20px; padding: 15px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981;">
+                <strong style="color: #065f46;">💡 Mẹo:</strong>
+                <p style="color: #065f46; margin-top: 5px; font-size: 14px;">
+                    Chọn món có "Độ khả thi: Cao" để nấu ngay. Món cần thêm nguyên liệu → tham khảo phần "Nguyên liệu đang thiếu".
+                </p>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="location.href='/demo'" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    ➡️ Tạo công thức chi tiết
+                </button>
+            </div>
+        `;
+        
+        document.getElementById('suggestionsContainer').innerHTML = html;
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+    
+    // Add first input on load
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelector('[data-ingredient-input]').focus();
+    });
+</script>
+
+<%- include('partials/footer') %>
+
