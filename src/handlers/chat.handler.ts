@@ -20,6 +20,8 @@ export async function chatHandler(req: Request, res: Response) {
 
     const response = await chatService.chat(userId, message);
 
+    console.log('response-chat',response)
+
     res.json({
       success: true,
       userId,
