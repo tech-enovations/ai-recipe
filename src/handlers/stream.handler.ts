@@ -57,7 +57,7 @@ export async function generateRecipeStreamHandler(req: Request, res: Response) {
       progress: 30,
     });
 
-    const { context: ragContext, recipesFound } = await ragService.retrieveContext(
+    const { context: ragContext, recipesFound, topResults = [] } = await ragService.retrieveContext(
       dishName,
       providedCategories
     );
@@ -67,7 +67,7 @@ export async function generateRecipeStreamHandler(req: Request, res: Response) {
       phase: 2,
       name: "Tìm kiếm",
       message: recipesFound > 0 
-        ? `✓ Tìm thấy ${recipesFound} công thức tương tự` 
+        ? `✓ Tìm thấy ${recipesFound} công thức tương tự ${topResults.map((doc) => doc.metadata?.dishName).join(", ")}` 
         : "✓ Không tìm thấy công thức tương tự, sẽ tạo mới",
       progress: 35,
       complete: true,
@@ -157,10 +157,13 @@ export async function generateRecipeStreamHandler(req: Request, res: Response) {
 
     res.end();
   } catch (error: any) {
+    console.log('error',error);
+    
     log.error("Error in stream handler", error);
     sendEvent("error", {
       message: "Lỗi khi tạo công thức",
       error: error.message,
+      
     });
     res.end();
   }

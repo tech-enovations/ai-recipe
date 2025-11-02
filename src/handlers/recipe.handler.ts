@@ -151,6 +151,7 @@ export async function searchRecipesHandler(req: Request, res: Response) {
     res.status(500).json({
       success: false,
       error: "Không thể tìm kiếm công thức.",
+      errorDetail: error.message,
     });
   }
 }

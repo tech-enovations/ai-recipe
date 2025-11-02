@@ -8,6 +8,7 @@ import recipeRoutes from "./routes/recipe.routes";
 import chatRoutes from "./routes/chat.routes";
 import { vectorStoreService } from "./services/vector-store.service";
 import { chatService } from "./services/chat.service";
+import { llmService } from "./services/llm.service";
 
 // Validate environment variables
 validateEnv();
@@ -26,6 +27,21 @@ app.use(
 );
 app.use(express.json());
 app.use(express.static("public"));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    log.info(`${req.method} ${req.path}`, {
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      duration: `${duration}ms`,
+    });
+  });
+  next();
+});
 
 // View engine setup for EJS
 app.set("view engine", "ejs");
@@ -87,11 +103,15 @@ app.get("/status", (req, res) => {
   });
 });
 
-// Health check
+// Health check (with hot reload support via nodemon)
 app.get("/health", (req, res) => {
   res.json({
     status: "healthy",
     timestamp: new Date().toISOString(),
+    provider: {
+      llm: llmService.getProviderName(),
+      available: llmService.getProvider().isAvailable(),
+    },
     vectorStore: vectorStoreService.isAvailable(),
     activeSessions: chatService.getTotalSessions(),
   });

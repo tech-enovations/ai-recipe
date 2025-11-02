@@ -1,0 +1,17 @@
+{
+  "watch": ["src"],
+  "ext": "ts,ejs,json",
+  "ignore": ["src/**/*.spec.ts", "dist", "node_modules"],
+  "exec": "ts-node src/server.ts",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "delay": 1000,
+  "verbose": true,
+  "restartable": "rs",
+  "events": {
+    "restart": "echo '\n🔄 Restarting server...\n'",
+    "crash": "echo '\n❌ Server crashed - waiting for changes...\n'"
+  }
+}
+
