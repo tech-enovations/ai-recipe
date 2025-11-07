@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { llmService } from "../services/llm.service";
 import { ragService } from "../services/rag.service";
 import { vectorStoreService } from "../services/vector-store.service";
+import { inputValidator } from "../services/input-validator.service";
 import { log } from "../utils/logger";
 
 export async function generateRecipeStreamHandler(req: Request, res: Response) {
@@ -20,6 +21,28 @@ export async function generateRecipeStreamHandler(req: Request, res: Response) {
       .json({ error: "Vui lòng cung cấp 'dishName' trong body request." });
   }
 
+  // Validate dish name BEFORE setting up SSE
+  try {
+    const validation = await inputValidator.validateDishName(dishName);
+    if (!validation.isValid) {
+      log.warn("Invalid dish name in stream", { dishName, violations: validation.violations });
+      return res.status(400).json({
+        error: inputValidator.getErrorMessage(validation),
+        violations: validation.violations,
+        reason: validation.reason,
+      });
+    }
+
+    // Use sanitized dish name
+    var sanitizedDishName = validation.sanitized;
+    log.info(`Stream: Dish name validated: "${dishName}" → "${sanitizedDishName}"`);
+  } catch (validationError: any) {
+    log.error("Validation error in stream", validationError);
+    return res.status(500).json({
+      error: "Lỗi kiểm tra input: " + validationError.message,
+    });
+  }
+
   // Set up SSE headers
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -33,7 +56,7 @@ export async function generateRecipeStreamHandler(req: Request, res: Response) {
   };
 
   try {
-    sendEvent("start", { message: "Bắt đầu tạo công thức...", dishName });
+    sendEvent("start", { message: "Bắt đầu tạo công thức...", dishName: sanitizedDishName });
 
     // Phase 1: Validate and prepare
     const providedCategories: string[] = Array.isArray(categories)
@@ -45,8 +68,9 @@ export async function generateRecipeStreamHandler(req: Request, res: Response) {
     sendEvent("phase", {
       phase: 1,
       name: "Chuẩn bị",
-      message: "Xác thực thông tin đầu vào",
+      message: "✓ Đã xác thực thông tin đầu vào",
       progress: 10,
+      complete: true,
     });
 
     // Phase 2: RAG Retrieval
@@ -58,7 +82,7 @@ export async function generateRecipeStreamHandler(req: Request, res: Response) {
     });
 
     const { context: ragContext, recipesFound, topResults = [] } = await ragService.retrieveContext(
-      dishName,
+      sanitizedDishName,
       providedCategories
     );
 
@@ -88,7 +112,7 @@ export async function generateRecipeStreamHandler(req: Request, res: Response) {
       ? ` Tính cho ${servingSize} người ăn.` 
       : " Tính cho 2-4 người ăn (mặc định).";
 
-    const prompt = `Tạo công thức chi tiết cho: ${dishName}.${categoryInstruction}${servingInstruction}${languageInstruction}
+    const prompt = `Tạo công thức chi tiết cho: ${sanitizedDishName}.${categoryInstruction}${servingInstruction}${languageInstruction}
      Trả về JSON với:
      - dishName, description, prepTime, cookTime, servings (số người theo yêu cầu)
      - ingredients: [{name, quantity (điều chỉnh theo số người), whereToFind (nơi mua ở Việt Nam)}]

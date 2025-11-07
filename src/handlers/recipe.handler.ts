@@ -4,6 +4,7 @@ import { SUPPORTED_LANGUAGES, SupportedLanguage } from "../config/constants";
 import { llmService } from "../services/llm.service";
 import { ragService } from "../services/rag.service";
 import { vectorStoreService } from "../services/vector-store.service";
+import { inputValidator } from "../services/input-validator.service";
 import { log } from "../utils/logger";
 
 export async function generateRecipeHandler(req: Request, res: Response) {
@@ -22,6 +23,21 @@ export async function generateRecipeHandler(req: Request, res: Response) {
   }
 
   try {
+    // Validate dish name with AI
+    const validation = await inputValidator.validateDishName(dishName);
+    if (!validation.isValid) {
+      log.warn("Invalid dish name input", { dishName, violations: validation.violations, reason: validation.reason });
+      return res.status(400).json({ 
+        error: inputValidator.getErrorMessage(validation),
+        violations: validation.violations,
+        reason: validation.reason,
+      });
+    }
+
+    // Use sanitized dish name
+    const sanitizedDishName = validation.sanitized;
+    log.info(`Dish name validated and sanitized: "${dishName}" → "${sanitizedDishName}"`);
+
     // Prepare categories
     const providedCategories: string[] = Array.isArray(categories)
       ? categories
@@ -48,11 +64,11 @@ export async function generateRecipeHandler(req: Request, res: Response) {
       lang = normalizedLang as SupportedLanguage;
     }
 
-    log.recipe.generating(dishName);
+    log.recipe.generating(sanitizedDishName);
 
     // RAG retrieval
     const { context: ragContext, recipesFound, queriesUsed } = await ragService.retrieveContext(
-      dishName,
+      sanitizedDishName,
       providedCategories
     );
     
@@ -67,7 +83,7 @@ export async function generateRecipeHandler(req: Request, res: Response) {
       ? ` Tính cho ${servingSize} người ăn.` 
       : " Tính cho 2-4 người ăn (mặc định).";
 
-    const prompt = `Tạo công thức chi tiết cho: ${dishName}.${categoryInstruction}${servingInstruction}${languageInstruction}
+    const prompt = `Tạo công thức chi tiết cho: ${sanitizedDishName}.${categoryInstruction}${servingInstruction}${languageInstruction}
      Trả về JSON với:
      - dishName, description, prepTime, cookTime, servings (số người theo yêu cầu)
      - ingredients: [{name, quantity (điều chỉnh theo số người), whereToFind (nơi mua ở Việt Nam)}]

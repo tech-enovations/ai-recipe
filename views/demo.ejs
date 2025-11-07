@@ -321,9 +321,20 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)
-        }).then(response => {
+        }).then(async response => {
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                // Try to parse error response (validation errors)
+                try {
+                    const errorData = await response.json();
+                    if (errorData.error) {
+                        showValidationError(errorData);
+                        document.getElementById('generateBtn').disabled = false;
+                        return;
+                    }
+                } catch (e) {
+                    // If not JSON, show generic error
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
             }
             
             const reader = response.body.getReader();
@@ -426,6 +437,30 @@
                 p.classList.remove('active');
             }
         }
+    }
+    
+    function showValidationError(errorData) {
+        // Build detailed error message
+        let message = errorData.error;
+        
+        // Add violations if available
+        if (errorData.violations && errorData.violations.length > 0) {
+            message += '\n\n📋 Chi tiết:\n' + errorData.violations.map(v => '• ' + v).join('\n');
+        }
+        
+        // Add AI reason if available
+        if (errorData.reason) {
+            message += '\n\n💡 ' + errorData.reason;
+        }
+        
+        // Show error banner with formatted message
+        const errorBanner = document.getElementById('errorBanner');
+        const errorMessage = document.getElementById('errorMessage');
+        errorMessage.innerHTML = message.replace(/\n/g, '<br>');
+        errorBanner.classList.add('show');
+        
+        // Hide progress container
+        document.getElementById('progressContainer').classList.remove('active');
     }
     
     function updatePhase(phaseNum, message, progress, status) {
