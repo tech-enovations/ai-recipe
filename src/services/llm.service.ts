@@ -7,32 +7,49 @@ import { log } from "../utils/logger";
 
 export class LLMService {
   private provider: ILLMProvider;
+  private chatProvider: ILLMProvider; // Separate provider for chat (can use Gemini to save costs)
 
   constructor() {
-    // Select provider based on ENV
-    this.provider = this.createProvider();
+    // Use OpenAI for recipe generation (better quality)
+    // Use Gemini for chat (free and good enough for conversations)
+    this.provider = this.createRecipeProvider();
+    this.chatProvider = this.createChatProvider();
     
     if (!this.provider.isAvailable()) {
-      throw new Error(`LLM Provider '${this.provider.getProviderName()}' is not available - check API key`);
+      throw new Error(`Recipe Provider '${this.provider.getProviderName()}' is not available - check API key`);
     }
     
-    log.info(`LLM Service initialized with provider: ${this.provider.getProviderName()}`);
+    log.info(`Recipe generation: ${this.provider.getProviderName()}, Chat: ${this.chatProvider.getProviderName()}`);
   }
   
-  private createProvider(): ILLMProvider {
-    switch (ENV.LLM_PROVIDER) {
-      case "gemini":
-        return new GeminiProvider();
-      case "openai":
-        return new OpenAIProvider();
-      default:
-        log.warn(`Unknown provider: ${ENV.LLM_PROVIDER}, falling back to Gemini`);
-        return new GeminiProvider();
+  private createRecipeProvider(): ILLMProvider {
+    // Always use OpenAI for recipe generation - better quality and structured output
+    if (ENV.OPENAI_API_KEY) {
+      return new OpenAIProvider();
     }
+    
+    // Fallback to Gemini if OpenAI key not available
+    log.warn("OpenAI API key not found, falling back to Gemini for recipes");
+    return new GeminiProvider();
+  }
+  
+  private createChatProvider(): ILLMProvider {
+    // Use Gemini for chat - it's free and good for conversations
+    if (ENV.GOOGLE_API_KEY) {
+      return new GeminiProvider();
+    }
+    
+    // Fallback to OpenAI if Gemini key not available
+    log.warn("Gemini API key not found, falling back to OpenAI for chat");
+    return new OpenAIProvider();
   }
   
   getProvider(): ILLMProvider {
     return this.provider;
+  }
+  
+  getChatProvider(): ILLMProvider {
+    return this.chatProvider;
   }
   
   getProviderName(): string {
@@ -44,10 +61,12 @@ export class LLMService {
   }
 
   getChatLLM() {
-    return this.provider.getChatLLM();
+    // Use separate chat provider (Gemini for free chat)
+    return this.chatProvider.getChatLLM();
   }
 
   getStructuredLLM() {
+    // Use recipe provider (OpenAI for better structured output)
     return this.provider.getStructuredLLM();
   }
 

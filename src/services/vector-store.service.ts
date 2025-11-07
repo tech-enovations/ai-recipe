@@ -14,24 +14,18 @@ export class VectorStoreService {
   private embeddings: Embeddings;
 
   constructor() {
-    // Select embedding provider based on LLM_PROVIDER
+    // Always use Gemini for embeddings (free and good quality)
     this.embeddings = this.createEmbeddings();
-    log.info(`Vector store using ${ENV.LLM_PROVIDER} embeddings`);
+    log.info(`Vector store using Gemini embeddings (free)`);
   }
   
   private createEmbeddings(): Embeddings {
-    if (ENV.LLM_PROVIDER === "openai") {
-      return new OpenAIEmbeddings({
-        apiKey: ENV.OPENAI_API_KEY,
-        modelName: ENV.OPENAI_EMBEDDING_MODEL,
-        dimensions: ENV.OPENAI_EMBEDDING_DIMENSIONS, // Reduced from 1536 to save quota
-      });
-    } else {
-      return new GoogleGenerativeAIEmbeddings({
-        apiKey: ENV.GOOGLE_API_KEY,
-        model: ENV.GEMINI_EMBEDDING_MODEL,
-      });
-    }
+    // Always use Gemini for RAG embeddings - it's free!
+    // OpenAI embeddings cost money and have quota limits
+    return new GoogleGenerativeAIEmbeddings({
+      apiKey: ENV.GOOGLE_API_KEY,
+      model: ENV.GEMINI_EMBEDDING_MODEL,
+    });
   }
 
   async initialize(): Promise<void> {
